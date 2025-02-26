@@ -1,0 +1,9 @@
+services:
+  llamacpp:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    ports:
+      - 8000:8000
+      - 8080:8080
+    volumes:
+      - ./models:/models
+    command: -m /models/model.gguf
