@@ -1,8 +1,10 @@
 import mlflow
-from mlflow.tracking import MlflowClient
-from serve.mlflow.model_config import ModelConfig
-from serve.mlflow.config import config_init
+
 from loguru import logger
+from mlflow.tracking import MlflowClient
+
+from serve.mlflow.config import config_init
+from serve.mlflow.model_config import ModelConfig
 
 
 def model_needs_update(model_name: str = "qa_model", alias: str = "champion") -> bool:

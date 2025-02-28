@@ -1,6 +1,6 @@
 import mlflow.pyfunc
+
 from llama_cpp import Llama
-import pandas as pd
 
 
 class LlamaCppModel(mlflow.pyfunc.PythonModel):
@@ -84,7 +84,5 @@ class LlamaCppModel(mlflow.pyfunc.PythonModel):
         prompt = self._build_prompt(model_input, verbose=params["verbose"])
 
         # Call the llama-cpp model with the prompt.
-        output = self.llama_model(
-            prompt, max_tokens=params["max_tokens"], stop=[], echo=False
-        )
+        output = self.llama_model(prompt, max_tokens=params["max_tokens"], stop=[], echo=False)
         return output

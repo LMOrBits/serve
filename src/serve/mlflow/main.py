@@ -1,21 +1,20 @@
-import mlflow
-from pathlib import Path
-from mlflow.tracking import MlflowClient
-from google.cloud import storage
-import serve.mlflow.config as config
 import os
-from tqdm import tqdm
-from serve.mlflow.model_config import ModelConfig
-from serve.mlflow.check import model_needs_update
+
+from pathlib import Path
+
+from google.cloud import storage
 from loguru import logger
+from mlflow.tracking import MlflowClient
+from tqdm import tqdm
+
+from serve.mlflow.check import model_needs_update
+from serve.mlflow.model_config import ModelConfig
 
 
 class TqdmWriter:
     def __init__(self, file_obj, total):
         self.file_obj = file_obj
-        self.pbar = tqdm(
-            total=total, unit="B", unit_scale=True, desc="Downloading the model"
-        )
+        self.pbar = tqdm(total=total, unit="B", unit_scale=True, desc="Downloading the model")
 
     def write(self, data):
         self.file_obj.write(data)
@@ -68,18 +67,14 @@ def download_model_artifact(
     gcs_path = gcs_path.replace("gs://", "")  # Remove gs:// prefix
     path_parts = gcs_path.split("/")
     bucket = storage_client.bucket(gcs_bucket)  # Use the provided bucket name
-    blob_path = (
-        "/".join(path_parts[1:]) + "/" + artifact_path
-    )  # Construct full blob path
+    blob_path = "/".join(path_parts[1:]) + "/" + artifact_path  # Construct full blob path
     blob_path = blob_path + "/artifacts/model.gguf"
     blob = bucket.blob(blob_path)
     blob.reload()
     logger.info(blob_path, blob.size)
 
     # Create local directory if it doesn't exist
-    local_dir = (
-        Path(__file__).parents[3] / "models"
-    )  # Remove model.gguf from directory path
+    local_dir = Path(__file__).parents[3] / "models"  # Remove model.gguf from directory path
     os.makedirs(local_dir, exist_ok=True)
 
     # Download to local path

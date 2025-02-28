@@ -1,6 +1,7 @@
-from loguru import logger
-from google.cloud import storage
 import os
+
+from google.cloud import storage
+from loguru import logger
 
 
 def upload_artifact_to_mlflow_gcs(
@@ -77,8 +78,6 @@ def upload_large_model(bucket_name, local_file_path, destination_blob_path):
     client = storage.Client()  # Assumes your environment has valid GCP credentials
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_path)
-    logger.info(
-        f"Uploading {local_file_path} to gs://{bucket_name}/{destination_blob_path} ..."
-    )
+    logger.info(f"Uploading {local_file_path} to gs://{bucket_name}/{destination_blob_path} ...")
     blob.upload_from_filename(local_file_path)
     logger.info("Upload complete.")

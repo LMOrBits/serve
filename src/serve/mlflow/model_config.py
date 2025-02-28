@@ -1,6 +1,7 @@
 import json
-from pathlib import Path
 import os
+
+from pathlib import Path
 
 
 class ModelConfig:
@@ -14,14 +15,12 @@ class ModelConfig:
             os.makedirs(self.config_path.parent, exist_ok=True)
 
         if not self.config_path.exists():
-            default_config = {
-                "current_model": {"run_id": None, "model_name": None, "alias": None}
-            }
+            default_config = {"current_model": {"run_id": None, "model_name": None, "alias": None}}
             self.save_config(default_config)
 
     def load_config(self):
         """Load the current configuration"""
-        with open(self.config_path, "r") as f:
+        with open(self.config_path) as f:
             return json.load(f)
 
     def save_config(self, config):

@@ -1,12 +1,15 @@
-import click
 import subprocess
+
 from pathlib import Path
-from serve.mlflow.main import download_model_artifact_from_gcs
-from serve.mlflow.check import model_needs_update
-from serve.mlflow.model_config import ModelConfig
-import serve.mlflow.config as config
+
+import click
 import mlflow
-import os
+
+import serve.mlflow.config as config
+
+from serve.mlflow.check import model_needs_update
+from serve.mlflow.main import download_model_artifact_from_gcs
+from serve.mlflow.model_config import ModelConfig
 
 CONTAINER_NAME = "llamacpp"
 IMAGE_NAME = "ghcr.io/ggerganov/llama.cpp:server"
@@ -62,17 +65,13 @@ def start_docker_container():
             text=True,
         )
         if result.stdout.strip():
-            click.echo(
-                f"Container '{CONTAINER_NAME}' is already running. Stopping it..."
-            )
+            click.echo(f"Container '{CONTAINER_NAME}' is already running. Stopping it...")
             stop_docker_container()
 
         cmd = ["docker", "run", "-d", "--name", CONTAINER_NAME]
         click.echo(f"Setting up Docker container '{CONTAINER_NAME}'...")
         cmd.extend(PORTS)
-        click.echo(
-            f"Mapping ports: {', '.join(PORTS[::2])} -> {', '.join(PORTS[1::2])}"
-        )
+        click.echo(f"Mapping ports: {', '.join(PORTS[::2])} -> {', '.join(PORTS[1::2])}")
         cmd.extend(["-v", MODEL_MOUNT])
         click.echo(f"Mounting model directory: {MODEL_MOUNT}")
         cmd.extend([IMAGE_NAME, "-m", MODEL_PATH])
@@ -146,9 +145,7 @@ def model(update, download, run, stop, status, rebuild, force_download):
         update_docker_image()
 
     if not any([update, download, run, stop, status, rebuild]):
-        click.echo(
-            "Please specify an action: --update, --download, --run, --stop, --status, or --rebuild"
-        )
+        click.echo("Please specify an action: --update, --download, --run, --stop, --status, or --rebuild")
 
 
 @click.command()
