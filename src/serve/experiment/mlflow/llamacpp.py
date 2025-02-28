@@ -28,7 +28,7 @@ class LlamaCppModel(mlflow.pyfunc.PythonModel):
         The logic below follows a two-stage construction, similar to your original code.
         """
         # Start a new prompt element.
-        prompt = '<s>[INST] '
+        prompt = "<s>[INST] "
         is_inside_elem = True
 
         # Loop over conversation rows to build the prompt.
@@ -55,7 +55,7 @@ class LlamaCppModel(mlflow.pyfunc.PythonModel):
 
             # Optionally start a new conversation element if needed.
             if not is_inside_elem:
-                prompt += '<s>[INST] '
+                prompt += "<s>[INST] "
                 is_inside_elem = True
 
         if verbose:
@@ -84,5 +84,7 @@ class LlamaCppModel(mlflow.pyfunc.PythonModel):
         prompt = self._build_prompt(model_input, verbose=params["verbose"])
 
         # Call the llama-cpp model with the prompt.
-        output = self.llama_model(prompt, max_tokens=params["max_tokens"], stop=[], echo=False)
+        output = self.llama_model(
+            prompt, max_tokens=params["max_tokens"], stop=[], echo=False
+        )
         return output
