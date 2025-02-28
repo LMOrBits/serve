@@ -23,7 +23,7 @@ build-backend = "hatchling.build"
 
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py39"
 exclude = [
     ".bzr",
@@ -53,6 +53,7 @@ exclude = [
     "site-packages",
     "venv",
 ]
+
 [tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
@@ -73,6 +74,11 @@ ignore = [
 ]
 fixable = ["ALL"]
 unfixable = []
+isort.known-first-party = ["data", "ml", "orchestration"]
+isort.section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+# isort.combine-as-imports = false
+isort.lines-between-types = 1
+isort.no-lines-before = ["future", "standard-library"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -81,8 +87,3 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = false
 docstring-code-line-length = "dynamic"
-
-[tool.ruff.isort]
-known-first-party = ["data", "ml", "orchestration"]
-section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
-combine-as-imports = true
