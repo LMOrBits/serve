@@ -140,4 +140,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# End Generation Here
+# ignore secrets
+secrets/
+models/
