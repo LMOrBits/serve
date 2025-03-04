@@ -20,12 +20,25 @@ serve-cmd = "serve.serve_cli:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+
+[tool.pytest.ini_options]
+pythonpath = ["./tests"]
+addopts = "--color=yes"
+
 [dependency-groups]
-mlflow-llamacpp-dev = ["serve[mlflow-llamacpp]"]
+
+mlflow-llamacpp-dev = [
+    "ipykernel>=6.29.5",
+    "pytest>=8.3.5",
+    "python-dotenv>=1.0.1",
+    "scikit-learn>=1.6.1",
+    "serve[mlflow-llamacpp]",
+]
 llamacpp-dev = ["serve[llamacpp]"]
 
 [project.optional-dependencies]
 llamacpp = ["llama-cpp-python>=0.3.7"]
+mlflow-llamacpp = ["serve[llamacpp]","mlflow>=2.20.1"]
 mlflow-llamacpp-gcs = ["serve[llamacpp]","google-cloud-storage", "mlflow>=2.20.1"]
 
 [tool.ruff]

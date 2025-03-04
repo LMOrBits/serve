@@ -143,3 +143,8 @@ cython_debug/
 # ignore secrets
 secrets/
 models/
+
+
+# eperiments 
+
+**/mlruns/**
