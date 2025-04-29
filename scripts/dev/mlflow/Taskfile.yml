@@ -1,0 +1,37 @@
+version: '3'
+
+vars:
+  MLFLOW_TASK_PATH: scripts/dev/mlflow
+
+tasks:
+  mlflow-simple-init:
+    dir: "{{.MLFLOW_TASK_PATH}}"
+    cmds:
+      - pwd
+      - docker compose -f compose.simple.yml --env-file ./config.env up --build
+
+  mlflow-simple-status:
+    dir: "{{.MLFLOW_TASK_PATH}}"
+    cmds:
+      - docker compose -f compose.simple.yml ps
+
+  mlflow-simple-stop:
+    dir: "{{.MLFLOW_TASK_PATH}}"
+    cmds:
+      - docker compose -f compose.simple.yml down
+
+  mlflow-minio-init:
+    dir: "{{.MLFLOW_TASK_PATH}}"
+    cmds:
+      - pwd
+      - docker compose -f compose.minio.yml --env-file ./config.env up --build
+
+  mlflow-minio-status:
+    dir: "{{.MLFLOW_TASK_PATH}}"
+    cmds:
+      - docker compose -f compose.minio.yml ps
+
+  mlflow-minio-stop:
+    dir: "{{.MLFLOW_TASK_PATH}}"
+    cmds:
+      - docker compose -f compose.minio.yml down

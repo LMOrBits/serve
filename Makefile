@@ -17,3 +17,6 @@ server-status:
 	@uv run serve status
 
 
+
+ruff-fix:
+	@uv run ruff check --fix

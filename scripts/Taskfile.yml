@@ -1,0 +1,14 @@
+version: '3'
+
+
+includes:
+  mlflow-gcs-llamacpp: ./tasks/mlflow_gcs_llamacapp/Taskfile.yml
+  dev: ./dev/Taskfile.yml
+
+tasks:
+  envs-show:
+    cmds:
+      - echo "Hello, {{.MLFLOW_TRACKING_URI}}!"
+      - echo "Hello, {{.MLFLOW_TRACKING_USERNAME}}!"
+
+

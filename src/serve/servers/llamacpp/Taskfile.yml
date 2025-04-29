@@ -1,0 +1,106 @@
+version: '3'
+vars:
+  CONTAINER_NAME: "lmorbits-llamacpp"
+  IMAGE_NAME: "ghcr.io/ggerganov/llama.cpp:server"
+
+tasks:
+  check_docker:
+    desc: "Check if Docker and docker daemon is running"
+    cmds:
+      - docker info 
+      - docker ps 
+    silent: true
+
+  serve:
+    desc: "Start the LlamaCpp server"
+    cmds:
+      - echo "Starting LlamaCpp server and waiting for it to be ready..."
+      - |
+        container_id=$(docker run -d \
+          --name {{.CONTAINER_NAME}}-{{.MODEL_ID}} \
+          -p {{.SERVER_PORTS}}:8000 \
+          -p {{.UI_PORT}}:8080 \
+          -v {{.MODEL_PATH}}:/models \
+          {{.IMAGE_NAME}} \
+          -m /models/{{.MODEL_NAME}})
+        
+        while ! docker logs $container_id 2>&1 | grep -q "GET /health 127.0.0.1 200"; do
+          echo "Loading model and starting server..."
+          docker logs --tail 10 $container_id
+          sleep 1
+        done
+        echo "LlamaCpp server is ready!"
+    vars:
+      MODEL_ID: '{{.MODEL_ID | default "model"}}'
+      MODEL_PATH: '{{.MODEL_PATH | default "/models"}}'
+      SERVER_PORTS: '{{.SERVER_PORTS | default "8000"}}'
+      UI_PORT: '{{.UI_PORT | default "8080"}}'
+      MODEL_NAME: '{{.MODEL_NAME | default "model.gguf"}}'
+    silent: false
+
+  healthcheck:
+    desc: "Check the health of the LlamaCpp server"
+    cmds:
+      - |
+        if ! docker ps -q -f name={{.CONTAINER_NAME}}-{{.MODEL_ID}} > /dev/null; then
+          echo "Container {{.CONTAINER_NAME}}-{{.MODEL_ID}} is not running"
+          exit 1
+        fi
+      - |
+        if ! curl -s http://localhost:{{.SERVER_PORTS}}/health > /dev/null; then
+          echo "Server is not responding on port {{.SERVER_PORTS}}"
+          exit 1
+        fi
+      - echo "Server is healthy and responding on port {{.SERVER_PORTS}} , http://localhost:{{.SERVER_PORTS}}/health"
+    vars:
+      MODEL_ID: '{{.MODEL_ID | default "model"}}'
+      SERVER_PORTS: '{{.SERVER_PORTS | default "8000"}}'
+    silent: false
+
+  status:
+    desc: "Check the status of the LlamaCpp server"
+    cmds:
+      - |
+        if {{.ALL}}; then
+          docker ps | grep {{.CONTAINER_NAME}}
+        else
+          docker ps | grep {{.CONTAINER_NAME}}-{{.MODEL_ID}}
+        fi
+    vars:
+      MODEL_ID: '{{.MODEL_ID | default "model"}}'
+      ALL: '{{.ALL | default false}}'
+    silent: true
+
+  stop:
+    desc: "Stop the LlamaCpp server"
+    cmds:
+      - |
+        if {{.ALL}}; then
+          docker stop {{.CONTAINER_NAME}}
+        else
+          docker stop {{.CONTAINER_NAME}}-{{.MODEL_ID}}
+        fi
+    vars:
+      MODEL_ID: '{{.MODEL_ID | default "model"}}'
+      ALL: '{{.ALL | default false}}'
+    silent: true
+
+  delete:
+    desc: "Delete the LlamaCpp server"
+    cmds:
+      - |
+        if {{.ALL}}; then
+          docker stop {{.CONTAINER_NAME}}
+          docker rm {{.CONTAINER_NAME}}
+        else
+          docker stop {{.CONTAINER_NAME}}-{{.MODEL_ID}}
+          docker rm {{.CONTAINER_NAME}}-{{.MODEL_ID}}
+        fi
+        if {{.PRUNE}}; then
+          docker image rm {{.IMAGE_NAME}}
+        fi
+    vars:
+      MODEL_ID: '{{.MODEL_ID | default "model"}}'
+      ALL: '{{.ALL | default false}}'
+      PRUNE: '{{.PRUNE | default false}}'
+    silent: true

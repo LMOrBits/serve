@@ -1,0 +1,8 @@
+version: "3"
+
+tasks:
+  envs-show:
+    cmds:
+      - echo "Hello, $MLFLOW_TRACKING_URI!"
+      - echo "Hello, $MLFLOW_TRACKING_USERNAME!"
+  
