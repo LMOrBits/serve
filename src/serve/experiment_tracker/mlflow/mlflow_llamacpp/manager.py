@@ -129,12 +129,25 @@ class ModelManager:
         except Exception as e:
             raise ModelManagerError(f"Failed to add model {model_name}: {str(e)}")
 
+    def model_update_available(self, model_name: str, alias: str ) -> bool:
+        return self.model_config_manager.check_for_update(model_name, alias)
+    
+    def update_serve(
+        self,
+        model_name: str,
+
+        port: Optional[int] = 8080,
+        gguf_relative_path: Optional[str] = "artifacts/model.gguf",
+    ) -> None:
+       self.delete_serve_model(model_name)
+       self.add_serve(model_name, port, gguf_relative_path, update=True)
+    
     def add_serve(
         self,
         model_name: str,
-        server_port: Optional[int] = 8000,
-        ui_port: Optional[int] = 8080,
+        port: Optional[int] = 8080,
         gguf_relative_path: Optional[str] = "artifacts/model.gguf",
+        update: bool = False,
 
     ) -> None:
         """Start serving a model through LLaMA.cpp server.
@@ -149,14 +162,22 @@ class ModelManager:
             ValueError: If model not found or ports invalid
         """
         try:
+            status = self.serve_manager.get_status(model_name)
+            if status and not update:
+                logger.info(f"Model {model_name} is already running")
+                return
+            elif status and update:
+                logger.info(f"Updating model {model_name}")
+                self.serve_manager.delete_serve(model_name)
+            elif status:
+                logger.info(f"Model {model_name} is already running")
+                return
             # Validate model exists
             if model_name not in self.model_config_manager.list_models():
                 self.add_model(model_name)
-                
+
             # Validate ports
-            if server_port == ui_port:
-                raise ValueError("Server port and UI port must be different")
-            if not (1024 <= server_port <= 65535 and 1024 <= ui_port <= 65535):
+            if not (1024 <= port <= 65535):
                 raise ValueError("Ports must be between 1024 and 65535")
                 
             # Get model path and verify it exists
@@ -164,16 +185,17 @@ class ModelManager:
             model_file = model_path / gguf_relative_path
             if not model_file.exists():
                 raise ValueError(f"Model file not found: {model_file}")
-                
+
+            
+            
             # Start server
             self.serve_manager.add_serve(
                 model_id=model_name,
                 model_name=model_file.name,
                 model_path=model_file.parent,
-                server_port=server_port,
-                ui_port=ui_port
+                port=port,
             )
-            logger.info(f"Started serving model {model_name} on ports {server_port}/{ui_port}")
+            logger.info(f"Started serving model {model_name} on ports {port}")
             
         except Exception as e:
             if not isinstance(e, ValueError):
@@ -200,6 +222,19 @@ class ModelManager:
         except Exception as e:
             if not isinstance(e, ValueError):
                 raise ModelManagerError(f"Failed to stop model {model_name}: {str(e)}")
+            raise
+    
+    def delete_serve_model(self, model_name: str) -> None:
+        try:
+            if model_name not in self.model_config_manager.list_models():
+                raise ValueError(f"Model {model_name} not found in configuration")
+                
+            self.serve_manager.delete(model_name)
+            logger.info(f"Deleted model {model_name}")
+            
+        except Exception as e:
+            if not isinstance(e, ValueError):
+                raise ModelManagerError(f"Failed to delete model {model_name}: {str(e)}")
             raise
 
     def delete_model(self, model_name: str) -> None:
@@ -238,6 +273,7 @@ class ModelManager:
                 raise ModelManagerError(f"Failed to delete model {model_name}: {str(e)}")
             raise
 
-
+    def delete_all_serve_models(self) -> None:
+        self.serve_manager.delete_all()
 
 

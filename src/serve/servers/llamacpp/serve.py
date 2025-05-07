@@ -17,13 +17,13 @@ class LlamaCppServerConfig(BaseModel):
         model_id: Unique identifier for the model instance
         model_path: Path to the model file
     """
-    server_port: Optional[int] = 8000
-    ui_port: Optional[int] = 8080
+
+    port: Optional[int] = 8080
     model_name: Optional[str] = None
     model_id: Optional[str] = None
     model_path: Optional[Union[Path, str]] = None
 
-    @field_validator('server_port', 'ui_port')
+    @field_validator('port')
     @classmethod
     def validate_ports(cls, v):
         if v is not None and not (1024 <= v <= 65535):
@@ -54,8 +54,7 @@ class LlamaCppServer:
         logger.info("Initialized LLaMA CPP server manager")
 
     def add_serve(self,
-                 server_port: Optional[int] = 8000,
-                 ui_port: Optional[int] = 8080,
+                 port: Optional[int] = 8080,
                  model_name: Optional[str] = None,
                  model_id: Optional[str] = None,
                  model_path: Optional[Union[Path, str]] = None) -> None:
@@ -73,8 +72,7 @@ class LlamaCppServer:
         """
         try:
             config = LlamaCppServerConfig(
-                server_port=server_port,
-                ui_port=ui_port,
+                port=port,
                 model_name=model_name,
                 model_id=model_id,
                 model_path=model_path
@@ -85,8 +83,7 @@ class LlamaCppServer:
                 
             self.serve(
                 model_path=config.model_path,
-                server_port=config.server_port,
-                ui_port=config.ui_port,
+                port=config.port,
                 model_name=config.model_name,
                 model_id=config.model_id
             )
@@ -119,8 +116,7 @@ class LlamaCppServer:
 
     def serve(self,
              model_path: Optional[Union[Path, str]] = None,
-             server_port: Optional[int] = 8000,
-             ui_port: Optional[int] = 8080,
+             port: Optional[int] = 8080,
              model_name: Optional[str] = None,
              model_id: Optional[str] = None) -> None:
         """Start serving a model instance.
@@ -138,8 +134,7 @@ class LlamaCppServer:
         try:
             self.cli.run("serve",
                         MODEL_PATH=model_path,
-                        SERVER_PORTS=server_port,
-                        UI_PORT=ui_port,
+                        PORT=port,
                         MODEL_NAME=model_name,
                         MODEL_ID=model_id)
             logger.info(f"Started server for model ID: {model_id}")
@@ -159,14 +154,15 @@ class LlamaCppServer:
         Raises:
             ValueError: If the model ID doesn't exist
         """
-        if not any(config.model_id == model_id for config in self.configs):
-            raise ValueError(f"Model ID '{model_id}' not found")
-            
         try:
-            return self.cli.run("status", MODEL_ID=model_id, ALL=False)
+            if not any(config.model_id == model_id for config in self.configs):
+                raise ValueError(f"Model ID '{model_id}' not found")
+            
+            self.cli.run("status", MODEL_ID=model_id, ALL=False)
+            return True
         except Exception as e:
             logger.error(f"Failed to get status for model {model_id}: {str(e)}")
-            raise
+            return None
 
     def get_all_statuses(self) -> List[dict]:
         """Get status of all model instances.
@@ -202,7 +198,7 @@ class LlamaCppServer:
             logger.error(f"Failed to stop server instance: {str(e)}")
             raise
 
-    def delete(self, model_id: str) -> None:
+    def delete(self, model_id: str, all: bool = False) -> None:
         """Delete a model instance.
         
         Args:
@@ -211,12 +207,21 @@ class LlamaCppServer:
         Raises:
             ValueError: If the model ID doesn't exist
         """
-        if not any(config.model_id == model_id for config in self.configs):
+        if all:
+            self.cli.run("delete", ALL=all)
+            return
+        elif not any(config.model_id == model_id for config in self.configs):
             raise ValueError(f"Model ID '{model_id}' not found")
             
         try:
-            self.cli.run("delete", MODEL_ID=model_id)
+            self.cli.run("delete", MODEL_ID=model_id, ALL=all)
             logger.info(f"Deleted server instance with model ID: {model_id}")
         except Exception as e:
             logger.error(f"Failed to delete server instance: {str(e)}")
             raise
+
+    @staticmethod
+    def delete_all() -> None:
+        """Delete all model instances."""
+        server = LlamaCppServer()
+        server.delete("", all=True)
