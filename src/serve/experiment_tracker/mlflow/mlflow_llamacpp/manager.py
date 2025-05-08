@@ -148,7 +148,7 @@ class ModelManager:
         port: Optional[int] = 8080,
         gguf_relative_path: Optional[str] = "artifacts/model.gguf",
         update: bool = False,
-
+        alias: Optional[str] = "champion",
     ) -> None:
         """Start serving a model through LLaMA.cpp server.
         
@@ -174,7 +174,7 @@ class ModelManager:
                 return
             # Validate model exists
             if model_name not in self.model_config_manager.list_models():
-                self.add_model(model_name)
+                self.add_model(model_name , alias=alias)
 
             # Validate ports
             if not (1024 <= port <= 65535):

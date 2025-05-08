@@ -103,8 +103,8 @@ class LlamaCppServer:
         Raises:
             ValueError: If the model ID doesn't exist
         """
-        if not any(config.model_id == model_id for config in self.configs):
-            raise ValueError(f"Model ID '{model_id}' not found")
+        # if not any(config.model_id == model_id for config in self.configs):
+        #     raise ValueError(f"Model ID '{model_id}' not found")
             
         try:
             self.cli.run("delete", MODEL_ID=model_id)
@@ -155,11 +155,14 @@ class LlamaCppServer:
             ValueError: If the model ID doesn't exist
         """
         try:
-            if not any(config.model_id == model_id for config in self.configs):
-                raise ValueError(f"Model ID '{model_id}' not found")
+            # if not any(config.model_id == model_id for config in self.configs):
+            #     raise ValueError(f"Model ID '{model_id}' not found")
             
-            self.cli.run("status", MODEL_ID=model_id, ALL=False)
-            return True
+            answer=self.cli.run("status", MODEL_ID=model_id, ALL=False)
+            if answer.stdout.strip() != "0":
+                return True
+            else:
+                return False
         except Exception as e:
             logger.error(f"Failed to get status for model {model_id}: {str(e)}")
             return None
@@ -188,8 +191,8 @@ class LlamaCppServer:
         Raises:
             ValueError: If the model ID doesn't exist
         """
-        if not any(config.model_id == model_id for config in self.configs):
-            raise ValueError(f"Model ID '{model_id}' not found")
+        # if not any(config.model_id == model_id for config in self.configs):
+        #     raise ValueError(f"Model ID '{model_id}' not found")
             
         try:
             self.cli.run("stop", MODEL_ID=model_id)
@@ -210,8 +213,8 @@ class LlamaCppServer:
         if all:
             self.cli.run("delete", ALL=all)
             return
-        elif not any(config.model_id == model_id for config in self.configs):
-            raise ValueError(f"Model ID '{model_id}' not found")
+        # elif not any(config.model_id == model_id for config in self.configs):
+        #     raise ValueError(f"Model ID '{model_id}' not found")
             
         try:
             self.cli.run("delete", MODEL_ID=model_id, ALL=all)

@@ -11,24 +11,37 @@ tasks:
       - docker ps
     silent: true
 
+  run:
+    desc: "Run the LlamaCpp server"
+    cmds:
+      - |
+
   serve:
     desc: "Start the LlamaCpp server"
     cmds:
       - echo "Starting LlamaCpp server and waiting for it to be ready..."
-      - |
-        container_id=$(docker run -d \
-          --name {{.CONTAINER_NAME}}-{{.MODEL_ID}} \
-          -p {{.PORT}}:8080 \
-          -v {{.MODEL_PATH}}:/models \
-          {{.IMAGE_NAME}} \
-          -m /models/{{.MODEL_NAME}})
 
+      - |
+        if [ "$(docker ps -q --filter "status=exited" -f name={{.CONTAINER_NAME}}-{{.MODEL_ID}})" ]; then
+          docker start {{.CONTAINER_NAME}}-{{.MODEL_ID}}
+          container_id=$(docker ps -aqf "name={{.CONTAINER_NAME}}-{{.MODEL_ID}}")
+        else
+          container_id=$(docker run -d \
+            --name {{.CONTAINER_NAME}}-{{.MODEL_ID}} \
+            -p {{.PORT}}:8080 \
+            -v {{.MODEL_PATH}}:/models \
+            {{.IMAGE_NAME}} \
+            -m /models/{{.MODEL_NAME}})
+        fi
+
+        echo "🕐 Waiting for LlamaCpp server to become healthy..."
         while ! docker logs $container_id 2>&1 | grep -q "GET /health 127.0.0.1 200"; do
-          echo "Loading model and starting server..."
+          echo "⏳ Still starting..."
           docker logs --tail 10 $container_id
           sleep 1
         done
-        echo "LlamaCpp server is ready!"
+
+        echo "✅ LlamaCpp server is ready!"
     vars:
       MODEL_ID: '{{.MODEL_ID | default "model"}}'
       MODEL_PATH: '{{.MODEL_PATH | default "/models"}}'
@@ -63,7 +76,7 @@ tasks:
         if {{.ALL}}; then
           docker ps | grep {{.CONTAINER_NAME}}
         else
-          docker ps | grep {{.CONTAINER_NAME}}-{{.MODEL_ID}}
+          docker ps | grep {{.CONTAINER_NAME}}-{{.MODEL_ID}} | wc -l 
         fi
     vars:
       MODEL_ID: '{{.MODEL_ID | default "model"}}'
@@ -75,9 +88,14 @@ tasks:
     cmds:
       - |
         if {{.ALL}}; then
-          docker stop {{.CONTAINER_NAME}}
+           if [ "$(docker ps -q -f name={{.CONTAINER_NAME}})" ]; then
+            docker stop $(docker ps -q -f name={{.CONTAINER_NAME}})
+          fi
         else
-          docker stop {{.CONTAINER_NAME}}-{{.MODEL_ID}}
+          if [ "$(docker ps -q -f name={{.CONTAINER_NAME}})" ]; then
+            docker stop $(docker ps -q -f name={{.CONTAINER_NAME}})
+          fi
+         
         fi
     vars:
       MODEL_ID: '{{.MODEL_ID | default "model"}}'
@@ -89,11 +107,18 @@ tasks:
     cmds:
       - |
         if {{.ALL}}; then
-          docker stop $(docker ps -q -f name={{.CONTAINER_NAME}})
+          if [ "$(docker ps -q -f name={{.CONTAINER_NAME}})" ]; then
+            docker stop $(docker ps -q -f name={{.CONTAINER_NAME}})
+            
+          fi
           docker rm $(docker ps -aq -f name={{.CONTAINER_NAME}})
+          
         else
-          docker stop {{.CONTAINER_NAME}}-{{.MODEL_ID}}
-          docker rm {{.CONTAINER_NAME}}-{{.MODEL_ID}}
+           if [ "$(docker ps -q -f name={{.CONTAINER_NAME}})" ]; then
+            docker stop $(docker ps -q -f name={{.CONTAINER_NAME}})
+            
+          fi
+          docker rm $(docker ps -aq -f name={{.CONTAINER_NAME}})
         fi
         if {{.PRUNE}}; then
           docker image rm {{.IMAGE_NAME}}
