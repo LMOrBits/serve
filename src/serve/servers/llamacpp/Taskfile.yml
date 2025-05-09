@@ -69,20 +69,6 @@ tasks:
       SERVER_PORTS: '{{.SERVER_PORTS | default "8000"}}'
     silent: false
 
-  status:
-    desc: "Check the status of the LlamaCpp server"
-    cmds:
-      - |
-        if {{.ALL}}; then
-          docker ps | grep {{.CONTAINER_NAME}}
-        else
-          docker ps | grep {{.CONTAINER_NAME}}-{{.MODEL_ID}} | wc -l 
-        fi
-    vars:
-      MODEL_ID: '{{.MODEL_ID | default "model"}}'
-      ALL: "{{.ALL | default false}}"
-    silent: true
-
   stop:
     desc: "Stop the LlamaCpp server"
     cmds:

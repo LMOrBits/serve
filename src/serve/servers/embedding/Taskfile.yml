@@ -4,85 +4,56 @@ vars:
   IMAGE_NAME: "{{.CONTAINER_NAME}}-image"
 
 tasks:
-  check_docker:
-    desc: "Check if Docker and docker daemon is running"
-    cmds:
-      - docker info
-      - docker ps
-    silent: true
-
-  local:
-    desc: "Run the Embedding server"
-    vars:
-      MODEL_PATH: "{{.MODEL_PATH}}"
-    dir: "{{.MODEL_PATH}}"
-    cmds:
-      - uv sync
-      - uv run task serve
-
   serve:
     desc: "Start the embedding server"
     vars:
       MODEL_PATH: "{{.MODEL_PATH}}"
-      MODEL_ID: "{{.MODEL_ID}}"
+      MODEL_NAME: "{{.MODEL_NAME}}"
+      PORT: "{{.PORT | default 1111}}"
     dir: "{{.MODEL_PATH}}"
     cmds:
-      - echo "Starting embedding server and waiting for it to be ready..."
-
       - |
-        if [ "$(docker ps -q --filter "status=exited" -f name={{.CONTAINER_NAME}}-{{.MODEL_ID}})" ]; then
-          docker start {{.CONTAINER_NAME}}-{{.MODEL_ID}}
+        if [ "$(docker ps -q --filter "status=running" -f name={{.CONTAINER_NAME}}-{{.MODEL_NAME}})" ]; then
+          echo "{{.CONTAINER_NAME}}-{{.MODEL_NAME}} is already running"
+        elif [ "$(docker ps -q --filter "status=exited" -f name={{.CONTAINER_NAME}}-{{.MODEL_NAME}})" ]; then
+          echo "Starting {{.CONTAINER_NAME}}-{{.MODEL_NAME}}"
+          docker start {{.CONTAINER_NAME}}-{{.MODEL_NAME}}
         else
-          cd {{.MODEL_PATH}} && uv run task run CONTAINER_NAME={{.CONTAINER_NAME}}-{{.MODEL_ID}}
+          echo "Building {{.IMAGE_NAME}} image"
+          docker build -t {{.IMAGE_NAME}} -f Dockerfile .
+          docker run -d -p {{.PORT}}:1111 --name {{.CONTAINER_NAME}}-{{.MODEL_NAME}} {{.IMAGE_NAME}}
         fi
-
-        echo "✅ Embedding server is ready!"
+        # health check on /health endpoint
+        until curl -s http://localhost:{{.PORT}}/health | grep -q "ok"; do
+          echo "Waiting for {{.CONTAINER_NAME}}-{{.MODEL_NAME}} to be ready..."
+          sleep 1
+        done
     silent: false
 
-  status:
-    desc: "Check the status of the Embedding server"
-    cmds:
-      - |
-        if {{.ALL}}; then
-          docker ps | grep {{.CONTAINER_NAME}}
-        else
-          docker ps | grep {{.CONTAINER_NAME}}-{{.MODEL_ID}} | wc -l 
-        fi
-    vars:
-      MODEL_ID: '{{.MODEL_ID | default "model"}}'
-      ALL: "{{.ALL | default false}}"
-    silent: true
-
   stop:
-    desc: "Stop the Embedding server"
+    desc: "Stop the embedding server"
+    vars:
+      MODEL_NAME: "{{.MODEL_NAME}}"
     cmds:
       - |
-        if {{.ALL}}; then
-          docker stop $(docker ps -q -f name={{.CONTAINER_NAME}}) 2>/dev/null || true
-        else
-          docker stop $(docker ps -q -f name={{.CONTAINER_NAME}}-{{.MODEL_ID}}) 2>/dev/null || true
+        if [ "$(docker ps -q --filter "status=exited" -f name={{.CONTAINER_NAME}}-{{.MODEL_NAME}})" ]; then
+          docker stop {{.CONTAINER_NAME}}-{{.MODEL_NAME}}
         fi
-    vars:
-      MODEL_ID: '{{.MODEL_ID | default "model"}}'
-      ALL: "{{.ALL | default false}}"
-    silent: true
-
+    silent: false
   delete:
-    desc: "Delete the Embedding server"
+    desc: "Delete the embedding server"
+    vars:
+      MODEL_NAME: "{{.MODEL_NAME}}"
     cmds:
       - |
-        if {{.ALL}}; then
-          docker stop $(docker ps -q -f name={{.CONTAINER_NAME}}) 2>/dev/null || true
-          docker rm $(docker ps -aq -f name={{.CONTAINER_NAME}}) 2>/dev/null || true
+        if [ "$(docker ps -q -f name={{.CONTAINER_NAME}}-{{.MODEL_NAME}})" ]; then 
+          if [ "$(docker ps -q --filter "status=running" -f name={{.CONTAINER_NAME}}-{{.MODEL_NAME}})" ]; then
+            echo "Stopping {{.CONTAINER_NAME}}-{{.MODEL_NAME}}"
+            docker stop {{.CONTAINER_NAME}}-{{.MODEL_NAME}}
+          fi
+          echo "Removing {{.CONTAINER_NAME}}-{{.MODEL_NAME}}"
+          docker rm {{.CONTAINER_NAME}}-{{.MODEL_NAME}}
         else
-          docker stop $(docker ps -q -f name={{.CONTAINER_NAME}}-{{.MODEL_ID}}) 2>/dev/null || true
-          docker rm $(docker ps -aq -f name={{.CONTAINER_NAME}}-{{.MODEL_ID}}) 2>/dev/null || true
+          echo "{{.CONTAINER_NAME}}-{{.MODEL_NAME}} is not running"
         fi
-        if {{.PRUNE}}; then
-          docker image rm {{.IMAGE_NAME}} 2>/dev/null || true
-        fi
-    vars:
-      MODEL_ID: '{{.MODEL_ID | default "model"}}'
-      ALL: "{{.ALL | default false}}"
-      PRUNE: "{{.PRUNE | default false}}"
-    silent: true
+    silent: false
