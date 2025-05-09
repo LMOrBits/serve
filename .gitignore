@@ -148,3 +148,8 @@ models/
 # eperiments 
 
 **/mlruns/**
+
+
+*.gguf
+*.pkl
+**/notebook/models/**
