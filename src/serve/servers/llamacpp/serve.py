@@ -8,31 +8,11 @@ from serve._cli.task import TaskCLI
 from mlflow import MlflowClient
 import json
 from mlflow.artifacts import download_artifacts
+from serve.utils.mlflow.model import get_model, get_model_run_id
 
 
-def get_model_run_id(mlflow_client: MlflowClient, model_name: str, alias: str ):
-    model_version = mlflow_client.get_model_version_by_alias(model_name, alias)
-    if not model_version:
-        raise ValueError(f"No model version found for {model_name} with alias {alias}")
-    return model_version.run_id
 
-def get_model(mlflow_client: MlflowClient, model_name: str, alias: str, desired_path: Path):
-    model_version = mlflow_client.get_model_version_by_alias(model_name, alias)
-    if not model_version:
-        raise ValueError(f"No model version found for {model_name} with alias {alias}")
-
-    model_save_dir = Path(desired_path) / f"{model_name}"
-    model_save_dir.mkdir(exist_ok=True)
-    
-    # Download the model
-    download_artifacts(
-        run_id=model_version.run_id,
-        artifact_path="model_path",
-        dst_path=str(model_save_dir)
-    )
-    return model_save_dir , model_version.run_id
-
-class EmbeddingConfig(BaseModel):
+class LlamaCppConfig(BaseModel):
     model_name: str
     alias: str
     model_path: Path
@@ -56,16 +36,17 @@ class LlamaCppServer():
             with open(configs_dir, "w") as f:
                 json.dump(configs, f)
         self.configs = self.get_configs()
-        self.desrie_path = desrie_path
+        self.desrie_path = Path(desrie_path).resolve().absolute()
         self.mlflow_client = mlflow_client
         self.task_cli = TaskCLI(Path(__file__).parent)
+        self.artifact_path = "model_path"
 
     def get_configs(self):
         with open(self.condir, "r") as f:
             configs = json.load(f) 
         return configs
     
-    def config_update(self, config: EmbeddingConfig):
+    def config_update(self, config: LlamaCppConfig):
         self.configs = self.get_configs()
         self.configs[config.model_name] = config.model_dump()
         with open(self.condir, "w") as f:
@@ -73,7 +54,7 @@ class LlamaCppServer():
 
     def run_serve(self, model_name: str, port: int = 8080):
         if model_name in self.configs:
-            self.task_cli.run("serve", model_id=model_name , model_path=self.configs[model_name]["model_path"], port=port)
+            self.task_cli.run("serve", model_id=model_name , model_path=self.desrie_path / self.configs[model_name]["model_path"], port=port)
         else:
             raise ValueError(f"Model {model_name} not found")
 
@@ -89,9 +70,9 @@ class LlamaCppServer():
                     shutil.rmtree(model_path)
             
             logger.info(f"Downloading model {model_name} from mlflow")
-            model_path , run_id = get_model(self.mlflow_client, model_name, alias, self.desrie_path)
+            model_path , run_id = get_model(self.mlflow_client, model_name, alias, self.desrie_path, self.artifact_path)
             logger.info(f"Model {model_name} downloaded to {model_path}")
-            self.config_update(EmbeddingConfig(model_name=model_name, alias=alias, model_path=model_path/"model_path"/"artifacts", run_id=run_id))
+            self.config_update(LlamaCppConfig(model_name=model_name, alias=alias, model_path=model_path/"model_path"/"artifacts", run_id=run_id))
             logger.info(f"Running model {model_name} with alias {alias}")
             self.run_serve(model_name , port)
     
@@ -122,5 +103,13 @@ class LlamaCppServer():
 
     def delete_serve(self, model_name: str):
         self.task_cli.run("delete", model_id=model_name)
+    
+    def delete_all_serve(self):
+        for model_name in self.configs:
+            self.delete_serve(model_name)
+    
+    def stop_all_serve(self):
+        for model_name in self.configs:
+            self.stop_serve(model_name)
 
    

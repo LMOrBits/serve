@@ -44,7 +44,7 @@ mlflow-embedding-dev = [
 llamacpp-dev = ["serve[llamacpp]"]
 
 [project.optional-dependencies]
-embedding = ["fastembed"]
+mlflow = ["mlflow>=2.20.1"]
 llamacpp = ["llama-cpp-python>=0.3.7"]
 mlflow-llamacpp = ["serve[llamacpp]", "mlflow>=2.20.1"]
 mlflow-llamacpp-gcs = [
@@ -52,7 +52,6 @@ mlflow-llamacpp-gcs = [
     "google-cloud-storage",
     "mlflow>=2.20.1",
 ]
-mlflow-embedding = ["serve[embedding]", "mlflow>=2.20.1"]
 
 [tool.ruff]
 line-length = 120
