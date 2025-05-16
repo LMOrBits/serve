@@ -25,7 +25,7 @@ class EmbeddingConfig(BaseModel):
         }
 class EmbeddingManager():
 
-    def __init__(self , desrie_path: Path, mlflow_client: MlflowClient):
+    def __init__(self , desrie_path: Path, mlflow_client: MlflowClient, gcp: bool = False):
         Path(desrie_path).mkdir(parents=True, exist_ok=True)
         configs_dir = Path(desrie_path) / "embedding_configs.json"
         self.condir = configs_dir
@@ -38,7 +38,7 @@ class EmbeddingManager():
         self.mlflow_client = mlflow_client
         self.task_cli = TaskCLI(Path(__file__).parent)
         self.artifact_path = "serve"
-
+        self.gcp = gcp
     def get_configs(self):
         with open(self.condir, "r") as f:
             configs = json.load(f) 
@@ -72,7 +72,7 @@ class EmbeddingManager():
                     shutil.rmtree(model_path)
             
             logger.info(f"Downloading model {model_name} from mlflow")
-            model_path , run_id = get_model(self.mlflow_client, model_name, alias, self.desrie_path, self.artifact_path)
+            model_path , run_id = get_model(self.mlflow_client, model_name, alias, self.desrie_path, self.artifact_path, self.gcp)
             logger.info(f"Model {model_name} downloaded to {model_path}")
             self.config_update(EmbeddingConfig(model_name=model_name, alias=alias, model_path=model_path/"serve", run_id=run_id))
             logger.info(f"Running model {model_name} with alias {alias}")

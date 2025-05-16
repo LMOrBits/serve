@@ -1,13 +1,13 @@
+import os
 from pathlib import Path
 import shutil
 from typing import Optional, List, Union, Dict
 from loguru import logger
 
-from pydantic import BaseModel, field_validator, FieldValidationInfo
+from pydantic import BaseModel 
 from serve._cli.task import TaskCLI
 from mlflow import MlflowClient
 import json
-from mlflow.artifacts import download_artifacts
 from serve.utils.mlflow.model import get_model, get_model_run_id
 
 
@@ -27,7 +27,7 @@ class LlamaCppConfig(BaseModel):
         }
 class LlamaCppServer():
 
-    def __init__(self , desrie_path: Path, mlflow_client: MlflowClient):
+    def __init__(self , desrie_path: Path, mlflow_client: MlflowClient , gcp: bool = False):
         Path(desrie_path).mkdir(parents=True, exist_ok=True)
         configs_dir = Path(desrie_path) / "lm_configs.json"
         self.condir = configs_dir
@@ -70,7 +70,18 @@ class LlamaCppServer():
                     shutil.rmtree(model_path)
             
             logger.info(f"Downloading model {model_name} from mlflow")
-            model_path , run_id = get_model(self.mlflow_client, model_name, alias, self.desrie_path, self.artifact_path)
+            credentials = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            mlflow_gcp = os.getenv("MLFLOW_GCS_BUCKET")
+            gcp = False
+            if mlflow_gcp is not None or credentials is not None:
+                if mlflow_gcp is None:
+                    logger.info("No MLFLOW_GCS_BUCKET environment variable found, using default model path")
+                if credentials is None:
+                    logger.info("No GOOGLE_APPLICATION_CREDENTIALS environment variable found, using default model path")
+                else:
+                    logger.info("Using GCP credentials and GCS bucket")
+                    gcp = True
+            model_path , run_id = get_model(self.mlflow_client, model_name, alias, self.desrie_path, self.artifact_path, gcp)
             logger.info(f"Model {model_name} downloaded to {model_path}")
             self.config_update(LlamaCppConfig(model_name=model_name, alias=alias, model_path=model_path/"model_path"/"artifacts", run_id=run_id))
             logger.info(f"Running model {model_name} with alias {alias}")

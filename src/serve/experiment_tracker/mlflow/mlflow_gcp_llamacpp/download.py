@@ -8,13 +8,13 @@ from mlflow.tracking import MlflowClient
 
 from serve.utils.mlflow.config import MLFlowConfig, ModelConfig
 from serve.utils.gcs.download import download_from_gcs
-from ss.experiment_tracker.mlflow_gcs_llamacpp.mlflow.check import model_needs_update
 
 def download_model_artifact(
+    client: MlflowClient,
     model_name="llama-cpp-qa", 
     alias="champion", 
     artifact_path="model_path",
-    gcs_bucket="mlflow-artifacts-bucket",
+    gcs_bucket:str = None,
     local_dir: Optional[Path] = None,
     gcs_credentials: Optional[Path] = None
 ) -> Path:
@@ -30,9 +30,9 @@ def download_model_artifact(
     Returns:
         Path: Local path to the downloaded model file
     """
-    mlflow_config = MLFlowConfig.from_env()
-    client = MlflowClient()
-    
+    os.environ["MLFLOW_ENABLE_PROXY_MULTIPART_DOWNLOAD"] = "true"
+    gcs_bucket = gcs_bucket or os.getenv("MLFLOW_GCS_BUCKET")
+    gcs_credentials = gcs_credentials or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
     # Get the model version by alias
     model_version = client.get_model_version_by_alias(model_name, alias)
     run_id = model_version.run_id
@@ -48,13 +48,18 @@ def download_model_artifact(
     logger.info(f"GCS Path: {gcs_path}")
     
     # Parse the GCS path
+    print(f'--------------------------------')
+    print(f'artifact_path: {artifact_path}')
+    print(f'destination_path: {local_dir}')
+    print(f'--------------------------------')
+
     gcs_path = gcs_path.replace('gs://', '')
     path_parts = gcs_path.split('/')
-    blob_path = '/'.join(path_parts[1:]) + '/' + artifact_path + "/artifacts"
+    blob_path = '/'.join(path_parts[1:]) + '/' + artifact_path 
     
     # Set up local paths
     local_dir = local_dir or Path(__file__).parents[3] / "models"
-    
+    local_dir = local_dir / f'{artifact_path}'
     # Download the model
     downloaded_files = download_from_gcs(
         gcs_bucket=gcs_bucket,
@@ -72,19 +77,15 @@ def download_model_artifact(
 
     return local_dir
 
-def download_model_artifact_from_gcs(
-    model_name="qa_model", 
-    alias="champion", 
-    artifact_path="model_path",
-    gcs_bucket="slmops-dev-ml-artifacts",
-    force_download=False,
-    local_dir: Optional[Path] = None
-):
-    os.environ["MLFLOW_ENABLE_PROXY_MULTIPART_DOWNLOAD"] = "true"
-    if force_download:
-        download_model_artifact(model_name, alias, artifact_path, gcs_bucket, local_dir)
-    else:
-        if model_needs_update():
-            download_model_artifact(model_name, alias, artifact_path, gcs_bucket)
-        else:
-            logger.info("Model is up to date")
+# def download_model_artifact_from_gcs(
+#     model_name="qa_model", 
+#     alias="champion", 
+#     artifact_path="model_path",
+#     gcs_bucket="slmops-dev-ml-artifacts",
+#     force_download=False,
+#     local_dir: Optional[Path] = None
+# ):
+    
+#     if force_download:
+#         download_model_artifact(model_name, alias, artifact_path, gcs_bucket, local_dir)
+   

@@ -1,18 +1,15 @@
-import mlflow
 from pathlib import Path
-from mlflow.tracking import MlflowClient
 from google.cloud import storage
-import serve.mlflow.config as config
 import os
 from tqdm import tqdm
-from serve.mlflow.model_config import ModelConfig
-from serve.mlflow.check import model_needs_update
+
 from loguru import logger
 from typing import Optional, List, Union
 from google.cloud.storage.blob import Blob
 from google.cloud.storage.bucket import Bucket
 from google.api_core.exceptions import GoogleAPIError
 from google.auth.exceptions import DefaultCredentialsError
+from google.oauth2 import service_account
 
 class DownloadError(Exception):
     """Custom exception for download-related errors."""
@@ -101,6 +98,7 @@ def download_from_gcs(
             
         # Convert paths to proper types
         destination_path = Path(destination_path)
+        print('destination_path', destination_path)
         if credentials:
             credentials = str(Path(credentials).resolve())
         else:
@@ -110,7 +108,9 @@ def download_from_gcs(
                     "No credentials provided and GOOGLE_APPLICATION_CREDENTIALS "
                     "environment variable not set"
                 )
-        
+        credentials = service_account.Credentials.from_service_account_file(
+            credentials
+        ) 
         # Initialize GCS client and get bucket
         try:
             storage_client = storage.Client(credentials=credentials)

@@ -80,8 +80,8 @@ class MLFlowConfig(BaseModel):
         config_dict = {}
         for env_var, description in required_vars.items():
             value = os.getenv(env_var)
-            if not value:
-                raise ValueError(f"Missing {description}: {env_var} environment variable must be set")
+            # if not value:
+            #     raise ValueError(f"Missing {description}: {env_var} environment variable must be set")
             config_dict[env_var.lower().replace('mlflow_', '')] = value
             
         registry_uri = os.getenv("MLFLOW_REGISTRY_URI")
